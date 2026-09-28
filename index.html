@@ -68,11 +68,19 @@ details.tips li{margin:6px 0;color:var(--muted)}
 @media (min-width:720px){.edPanes{grid-template-columns:1fr 1.4fr}}
 .pane{background:var(--surface);border:2px solid var(--line);border-radius:var(--radius);overflow:hidden}
 .paneLabel{font-size:13px;color:var(--muted);padding:8px 12px;border-bottom:2px solid var(--line)}
-.checker{height:220px;display:grid;place-items:center;
+.checker{height:340px;display:grid;place-items:center;
   background:repeating-conic-gradient(#0000000f 0 25%,transparent 0 50%) 0 0/18px 18px}
-.checker canvas{max-width:92%;max-height:92%}
-#preview3d{height:320px;touch-action:none}
-@media (min-width:720px){.checker{height:360px}#preview3d{height:360px}}
+.checker canvas{max-width:96%;max-height:96%;touch-action:none;cursor:crosshair}
+#preview3d{height:300px;touch-action:none;overflow:hidden}
+#preview3d canvas{display:block}
+@media (min-width:720px){.checker{height:400px}#preview3d{height:460px}}
+.brushBar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px;border-top:2px solid var(--line)}
+.seg{display:flex;background:var(--soft);border-radius:999px;padding:3px}
+.seg button,.mini{border:0;border-radius:999px;background:transparent;color:var(--ink);padding:7px 12px;font-size:14px;font-weight:700}
+.seg button.on{background:var(--primary);color:var(--primary-ink)}
+.mini{background:var(--soft)}
+.mini:disabled{opacity:.4}
+.brushSize{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);flex:1 1 160px;white-space:nowrap}
 .controls{display:grid;gap:14px;background:var(--surface);border:2px solid var(--line);border-radius:var(--radius);padding:14px 16px;margin-bottom:14px}
 .controls label{display:grid;gap:6px;font-weight:600;font-size:15px}
 .controls label small{font-weight:400;color:var(--muted)}
@@ -139,8 +147,11 @@ model-viewer{width:100%;height:56vh;background:var(--soft);border-radius:14px}
     <div><b>3</b>같이 찰칵!</div>
   </div>
   <div class="stack">
-    <label class="btn primary big">🖍️ 그림 찍기 / 불러오기
-      <input type="file" id="fileIn" accept="image/*" hidden>
+    <label class="btn primary big">📷 카메라로 그림 찍기
+      <input type="file" class="picIn" accept="image/*" capture="environment" hidden>
+    </label>
+    <label class="btn big">🖼️ 앨범에서 불러오기
+      <input type="file" class="picIn" accept="image/*" hidden>
     </label>
     <button id="sampleBtn" class="btn ghost">샘플 그림으로 먼저 해보기</button>
   </div>
@@ -166,7 +177,19 @@ model-viewer{width:100%;height:56vh;background:var(--soft);border-radius:14px}
 <section id="editor" class="screen" hidden>
   <div class="bar"><button id="edBack" class="icon" aria-label="뒤로">←</button><h2>입체로 만들기</h2></div>
   <div class="edPanes">
-    <div class="pane"><div class="paneLabel">잘라낸 그림</div><div class="checker"><canvas id="cutCanvas"></canvas></div></div>
+    <div class="pane">
+      <div class="paneLabel">그림 다듬기 · 밝은 부분만 3D가 돼요</div>
+      <div class="checker"><canvas id="cutCanvas"></canvas></div>
+      <div class="brushBar">
+        <div class="seg">
+          <button data-tool="erase" class="on">🧽 지우기</button>
+          <button data-tool="restore">✏️ 되살리기</button>
+        </div>
+        <button id="undoBtn" class="mini" disabled>↩️ 되돌리기</button>
+        <button id="resetBtn" class="mini">처음으로</button>
+        <label class="brushSize">붓 크기 <input type="range" id="brushIn" min="6" max="60" value="22"></label>
+      </div>
+    </div>
     <div class="pane"><div class="paneLabel">3D 미리보기 · 손가락으로 돌려보세요</div><div id="preview3d"></div></div>
   </div>
   <div class="controls">
@@ -569,28 +592,61 @@ function initPreview() {
 }
 
 async function openEditor(img) {
-  ed = { img, src: readPixels(img) };
+  ed = { img, src: readPixels(img), tool: 'erase', undo: [] };
   ed.bg = estimateBackground(ed.src);
+  const { W, H } = ed.src;
+  ed.edits = new Int8Array(W * H);                 // 손으로 고친 부분: -1 지움, 1 되살림
+  // 편집 화면용: 원본 사진(적당한 크기)과 마스크 캔버스
+  const vs = Math.min(1, 900 / Math.max(img.naturalWidth, img.naturalHeight));
+  ed.view = document.createElement('canvas');
+  ed.view.width = Math.round(img.naturalWidth * vs); ed.view.height = Math.round(img.naturalHeight * vs);
+  ed.view.getContext('2d').drawImage(img, 0, 0, ed.view.width, ed.view.height);
+  ed.maskCv = document.createElement('canvas'); ed.maskCv.width = W; ed.maskCv.height = H;
+  ed.layer = document.createElement('canvas'); ed.layer.width = ed.view.width; ed.layer.height = ed.view.height;
+  const cc = $('#cutCanvas'); cc.width = ed.view.width; cc.height = ed.view.height;
   $('#nameIn').value = `친구 ${charSeq + 1}`;
   $('#thrIn').value = 42; $('#puffIn').value = 0.7;
+  $('#undoBtn').disabled = true;
+  document.querySelectorAll('[data-tool]').forEach(x => x.classList.toggle('on', x.dataset.tool === 'erase'));
   show('editor'); initPreview();
   rebuildMask();
 }
 
+function applyEdits() {
+  const m = ed.base.slice(), e = ed.edits;
+  for (let i = 0; i < m.length; i++) if (e[i]) m[i] = e[i] > 0 ? 1 : 0;
+  ed.mask = m;
+}
+
+// 남길 부분은 선명하게, 지워질 부분은 흐리게 보여주기
+function drawEditView() {
+  const { W, H } = ed.src, mx = ed.maskCv.getContext('2d'), id = mx.createImageData(W, H);
+  for (let i = 0; i < W * H; i++) id.data[i * 4 + 3] = ed.mask[i] * 255;
+  mx.putImageData(id, 0, 0);
+  const L = ed.layer.getContext('2d');
+  L.globalCompositeOperation = 'copy'; L.drawImage(ed.view, 0, 0);
+  L.globalCompositeOperation = 'destination-in'; L.drawImage(ed.maskCv, 0, 0, ed.layer.width, ed.layer.height);
+  const x = $('#cutCanvas').getContext('2d');
+  x.clearRect(0, 0, ed.layer.width, ed.layer.height);
+  x.globalAlpha = 0.22; x.drawImage(ed.view, 0, 0);
+  x.globalAlpha = 1; x.drawImage(ed.layer, 0, 0);
+}
+
 function rebuildMask() {
-  const m = buildMask(ed.src, ed.bg, +$('#thrIn').value);
-  const cut = cutout(ed.img, ed.src, m);
-  const cc = $('#cutCanvas');
+  ed.base = buildMask(ed.src, ed.bg, +$('#thrIn').value);
+  applyEdits(); drawEditView(); rebuild3D();
+}
+
+function rebuild3D() {
+  const cut = cutout(ed.img, ed.src, ed.mask);
   if (!cut) {
-    ed.cut = null; cc.width = cc.height = 1;
-    $('#edMsg').textContent = '그림을 찾지 못했어요. ‘배경 지우기’를 왼쪽으로 내려 보세요.';
+    ed.cut = null;
+    $('#edMsg').textContent = '그림을 찾지 못했어요. ‘배경 지우기’를 왼쪽으로 내리거나 ✏️ 되살리기로 칠해 보세요.';
     $('#edDone').disabled = true; pv.holder.clear(); return;
   }
   ed.cut = cut; $('#edDone').disabled = false;
-  cc.width = cut.tex.width; cc.height = cut.tex.height;
-  cc.getContext('2d').drawImage(cut.tex, 0, 0);
   $('#edMsg').textContent = cut.coverage > 0.93
-    ? '종이 밖(책상 등)까지 잡혔을 수 있어요. ‘배경 지우기’를 올리거나 종이만 꽉 차게 다시 찍어 주세요.' : '';
+    ? '종이 밖(책상 등)까지 잡혔을 수 있어요. 🧽 지우기로 문질러 지우거나 ‘배경 지우기’를 올려 보세요.' : '';
   ed.texture?.dispose(); ed.material?.dispose();
   ed.texture = new THREE.CanvasTexture(cut.tex);
   ed.texture.colorSpace = THREE.SRGBColorSpace;
@@ -612,6 +668,54 @@ function rebuildMesh() {
 function debounce(fn, ms = 80) { let t; return () => { clearTimeout(t); t = setTimeout(fn, ms); }; }
 $('#thrIn').addEventListener('input', debounce(rebuildMask));
 $('#puffIn').addEventListener('input', debounce(rebuildMesh, 40));
+
+/* ---------- 손가락으로 지우기 / 되살리기 ---------- */
+{
+  const cc = $('#cutCanvas');
+  let last = null, queued = false;
+  const pushUndo = () => {
+    ed.undo.push(ed.edits.slice()); if (ed.undo.length > 20) ed.undo.shift();
+    $('#undoBtn').disabled = false;
+  };
+  const redraw = () => { if (queued) return; queued = true; requestAnimationFrame(() => { queued = false; if (ed) drawEditView(); }); };
+  const stamp = (cx, cy, r) => {
+    const { W, H } = ed.src, v = ed.tool === 'erase' ? -1 : 1;
+    for (let y = Math.max(0, Math.floor(cy - r)); y <= Math.min(H - 1, Math.ceil(cy + r)); y++)
+      for (let x = Math.max(0, Math.floor(cx - r)); x <= Math.min(W - 1, Math.ceil(cx + r)); x++)
+        if ((x - cx) ** 2 + (y - cy) ** 2 <= r * r) { const i = y * W + x; ed.edits[i] = v; ed.mask[i] = v > 0 ? 1 : 0; }
+  };
+  const paint = e => {
+    const b = cc.getBoundingClientRect(), { W, H } = ed.src;
+    const p = { x: (e.clientX - b.left) / b.width * W, y: (e.clientY - b.top) / b.height * H };
+    const r = +$('#brushIn').value / 2 / b.width * W;
+    const from = last || p, n = Math.max(1, Math.ceil(Math.hypot(p.x - from.x, p.y - from.y) / (r * 0.4)));
+    for (let k = 1; k <= n; k++) stamp(from.x + (p.x - from.x) * k / n, from.y + (p.y - from.y) * k / n, r);
+    last = p; redraw();
+  };
+  cc.addEventListener('pointerdown', e => {
+    if (!ed || !e.isPrimary) return;
+    cc.setPointerCapture(e.pointerId); pushUndo(); last = null; paint(e);
+  });
+  cc.addEventListener('pointermove', e => { if (last && ed) paint(e); });
+  const end = () => { if (!last || !ed) return; last = null; rebuild3D(); };
+  cc.addEventListener('pointerup', end);
+  cc.addEventListener('pointercancel', end);
+
+  document.querySelectorAll('[data-tool]').forEach(b => b.onclick = () => {
+    ed.tool = b.dataset.tool;
+    document.querySelectorAll('[data-tool]').forEach(x => x.classList.toggle('on', x === b));
+  });
+  $('#undoBtn').onclick = () => {
+    if (!ed?.undo.length) return;
+    ed.edits = ed.undo.pop(); $('#undoBtn').disabled = !ed.undo.length;
+    applyEdits(); drawEditView(); rebuild3D();
+  };
+  $('#resetBtn').onclick = () => {
+    if (!ed) return;
+    pushUndo(); ed.edits.fill(0);
+    applyEdits(); drawEditView(); rebuild3D();
+  };
+}
 
 $('#edBack').onclick = () => {
   ed?.geometry?.dispose(); ed?.material?.dispose(); ed?.texture?.dispose(); ed = null;
@@ -640,12 +744,12 @@ function loadImage(src) {
   return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
 }
 
-$('#fileIn').addEventListener('change', async e => {
+document.querySelectorAll('.picIn').forEach(inp => inp.addEventListener('change', async e => {
   const f = e.target.files[0]; e.target.value = '';
   if (!f) return;
   try { await openEditor(await loadImage(URL.createObjectURL(f))); }
   catch { alert('사진을 열 수 없어요. 다른 사진으로 해 보세요.'); }
-});
+}));
 $('#sampleBtn').onclick = async () => openEditor(await loadImage(makeSample()));
 
 function renderHome() {
