@@ -1,0 +1,989 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#ff6b4a">
+<title>그림친구 AR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#fff8ec; --surface:#ffffff; --ink:#2b2430; --muted:#6f6577; --line:#eadfce;
+  --primary:#ff6b4a; --primary-ink:#ffffff; --accent:#3aa7ff; --soft:#ffeede;
+  --radius:18px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#1c1820; --surface:#28222d; --ink:#f3ede6; --muted:#b3a9bb; --line:#3b3340; --soft:#3a2a26;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#1c1820; --surface:#28222d; --ink:#f3ede6; --muted:#b3a9bb; --line:#3b3340; --soft:#3a2a26;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;-webkit-tap-highlight-color:transparent}
+h1,h2,.fun{font-family:"Jua",system-ui,sans-serif;font-weight:400}
+button,.btn{font:inherit;cursor:pointer}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:2px solid var(--line);background:var(--surface);color:var(--ink);
+  padding:10px 16px;border-radius:999px;text-decoration:none;font-weight:600;font-size:15px}
+.btn.primary{background:var(--primary);border-color:var(--primary);color:var(--primary-ink)}
+.btn.ghost{background:transparent}
+.btn.big{width:100%;padding:16px;font-size:19px;font-family:"Jua",system-ui,sans-serif;font-weight:400}
+.btn:disabled{opacity:.45;cursor:default}
+.icon{width:44px;height:44px;border-radius:50%;border:0;background:rgba(0,0,0,.45);color:#fff;font-size:20px;display:grid;place-items:center}
+
+/* ---------- home ---------- */
+#home{max-width:560px;margin:0 auto;padding:20px 16px 110px}
+.hero{text-align:center;padding:12px 0 8px}
+.hero h1{font-size:38px;margin:0;color:var(--primary)}
+.hero p{margin:6px 0 0;color:var(--muted)}
+.steps{display:flex;justify-content:space-between;gap:6px;margin:18px 0}
+.steps div{flex:1;background:var(--surface);border:2px solid var(--line);border-radius:14px;padding:10px 4px;text-align:center;font-size:13px;color:var(--muted)}
+.steps b{display:block;font-family:"Jua",sans-serif;font-weight:400;font-size:24px;color:var(--ink)}
+.stack{display:grid;gap:10px}
+h2{font-size:22px;margin:26px 0 10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.card{background:var(--surface);border:2px solid var(--line);border-radius:var(--radius);padding:10px;display:flex;flex-direction:column;gap:8px}
+.card .thumb{aspect-ratio:1;border-radius:12px;background:var(--soft);display:grid;place-items:center;overflow:hidden}
+.card .thumb img{max-width:90%;max-height:90%}
+.card .name{font-family:"Jua",sans-serif;font-size:18px;text-align:center}
+.card .acts{display:grid;grid-template-columns:1fr 1fr 40px;gap:4px}
+.card .acts button{border:0;border-radius:10px;background:var(--soft);color:var(--ink);padding:8px 2px;font-size:12px;font-weight:600}
+.muted{color:var(--muted)}
+.sticky{position:fixed;left:0;right:0;bottom:0;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:linear-gradient(transparent,var(--bg) 35%)}
+.sticky .btn{max-width:528px;margin:0 auto;display:flex}
+details.tips{margin-top:22px;background:var(--surface);border:2px solid var(--line);border-radius:var(--radius);padding:12px 16px}
+details.tips summary{font-weight:700;cursor:pointer}
+details.tips li{margin:6px 0;color:var(--muted)}
+
+/* ---------- editor ---------- */
+#editor{max-width:900px;margin:0 auto;padding:12px 16px 24px}
+.bar{display:flex;align-items:center;gap:10px}
+.bar h2{margin:0}
+.bar .icon{background:var(--surface);color:var(--ink);border:2px solid var(--line)}
+.edPanes{display:grid;grid-template-columns:1fr;gap:12px;margin:14px 0}
+@media (min-width:720px){.edPanes{grid-template-columns:1fr 1.4fr}}
+.pane{background:var(--surface);border:2px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.paneLabel{font-size:13px;color:var(--muted);padding:8px 12px;border-bottom:2px solid var(--line)}
+.checker{height:220px;display:grid;place-items:center;
+  background:repeating-conic-gradient(#0000000f 0 25%,transparent 0 50%) 0 0/18px 18px}
+.checker canvas{max-width:92%;max-height:92%}
+#preview3d{height:320px;touch-action:none}
+@media (min-width:720px){.checker{height:360px}#preview3d{height:360px}}
+.controls{display:grid;gap:14px;background:var(--surface);border:2px solid var(--line);border-radius:var(--radius);padding:14px 16px;margin-bottom:14px}
+.controls label{display:grid;gap:6px;font-weight:600;font-size:15px}
+.controls label small{font-weight:400;color:var(--muted)}
+.controls input[type=text]{font:inherit;padding:10px 12px;border-radius:12px;border:2px solid var(--line);background:var(--bg);color:var(--ink)}
+input[type=range]{width:100%;accent-color:var(--primary)}
+.msg{margin:0;color:#d9480f;font-size:14px;min-height:1em}
+
+/* ---------- AR camera ---------- */
+#ar{position:fixed;inset:0;background:#000;overflow:hidden}
+#cam,#bgImg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+#cam.mirror{transform:scaleX(-1)}
+#arStage{position:absolute;inset:0}
+#arStage canvas{display:block;width:100%;height:100%;touch-action:none}
+.arTop{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:calc(10px + env(safe-area-inset-top)) 12px 10px;pointer-events:none}
+.arTop > *{pointer-events:auto}
+.arTopRight{display:flex;gap:8px}
+.pill{height:44px;border-radius:22px;border:0;background:rgba(0,0,0,.45);color:#fff;padding:0 14px;font-weight:700}
+.camMsg{position:absolute;left:16px;right:16px;top:30%;background:var(--surface);color:var(--ink);border-radius:var(--radius);padding:16px;text-align:center;display:grid;gap:10px}
+.hintBubble{position:absolute;left:50%;top:calc(66px + env(safe-area-inset-top));transform:translateX(-50%);background:rgba(0,0,0,.55);color:#fff;
+  padding:8px 14px;border-radius:999px;font-size:13px;white-space:nowrap;transition:opacity .6s;pointer-events:none;max-width:calc(100% - 32px);overflow:hidden;text-overflow:ellipsis}
+.selTools{position:absolute;right:12px;top:calc(70px + env(safe-area-inset-top));display:grid;gap:8px}
+.selTools button{border:0;border-radius:14px;background:rgba(0,0,0,.5);color:#fff;padding:8px 10px;font-size:13px;font-weight:700;min-width:64px}
+.selTools button.on{background:var(--accent)}
+.arBottom{position:absolute;left:0;right:0;bottom:0;padding:10px 0 calc(14px + env(safe-area-inset-bottom));display:grid;gap:12px;justify-items:center;
+  background:linear-gradient(transparent,rgba(0,0,0,.45))}
+.shutter{width:76px;height:76px;border-radius:50%;border:6px solid #fff;background:var(--primary);box-shadow:0 2px 12px rgba(0,0,0,.4)}
+.shutter:active{transform:scale(.94)}
+.tray{display:flex;gap:8px;overflow-x:auto;max-width:100%;padding:0 16px;scrollbar-width:none}
+.tray button{flex:0 0 auto;width:62px;height:62px;border-radius:14px;border:2px solid rgba(255,255,255,.7);background:rgba(255,255,255,.2);display:grid;place-items:center;padding:4px;position:relative}
+.tray button img{max-width:100%;max-height:100%}
+.tray button::after{content:"+";position:absolute;right:-4px;top:-6px;background:var(--primary);color:#fff;border-radius:50%;width:20px;height:20px;font-size:15px;line-height:20px;font-weight:800}
+#countdown{position:absolute;inset:0;display:grid;place-items:center;font-family:"Jua",sans-serif;font-size:140px;color:#fff;text-shadow:0 4px 20px rgba(0,0,0,.5);pointer-events:none}
+#flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .35s}
+#flash.go{opacity:1;transition:none}
+
+/* ---------- modals ---------- */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:grid;place-items:center;padding:16px;z-index:10}
+.sheet{background:var(--surface);color:var(--ink);border-radius:22px;padding:14px;width:100%;max-width:520px;max-height:100%;overflow:auto;display:grid;gap:12px}
+.sheet img{width:100%;max-height:62vh;object-fit:contain;border-radius:14px;background:#000}
+.row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+model-viewer{width:100%;height:56vh;background:var(--soft);border-radius:14px}
+.arBtn{position:absolute;left:50%;bottom:14px;transform:translateX(-50%)}
+.small{font-size:13px;color:var(--muted);margin:0;line-height:1.5}
+</style>
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+}}
+</script>
+<script type="module" src="https://cdn.jsdelivr.net/npm/@google/model-viewer@3.5.0/dist/model-viewer.min.js"></script>
+</head>
+<body>
+
+<!-- ================= 홈 ================= -->
+<section id="home" class="screen">
+  <header class="hero">
+    <h1>그림친구 AR</h1>
+    <p>내가 그린 그림이 입체로 튀어나와 같이 사진을 찍어요!</p>
+  </header>
+  <div class="steps">
+    <div><b>1</b>그림 찍기</div>
+    <div><b>2</b>입체로 변신</div>
+    <div><b>3</b>같이 찰칵!</div>
+  </div>
+  <div class="stack">
+    <label class="btn primary big">🖍️ 그림 찍기 / 불러오기
+      <input type="file" id="fileIn" accept="image/*" hidden>
+    </label>
+    <button id="sampleBtn" class="btn ghost">샘플 그림으로 먼저 해보기</button>
+  </div>
+
+  <h2>우리 반 친구들 <span id="count" class="muted"></span></h2>
+  <p id="emptyHint" class="muted">아직 만든 친구가 없어요. 그림을 찍어 첫 친구를 만들어 보세요!</p>
+  <div id="charList" class="grid"></div>
+
+  <details class="tips">
+    <summary>✨ 그림이 잘 나오는 촬영 팁</summary>
+    <ul>
+      <li>흰 종이에 그리고, <b>종이만 화면에 꽉 차게</b> 찍어요. (책상이 보이면 배경으로 인식이 어려워요)</li>
+      <li>그림 테두리를 <b>진한 색으로 닫힌 선</b>으로 그리면 깔끔하게 잘려요.</li>
+      <li>그림자가 지지 않게 밝은 곳에서 위에서 똑바로 찍어요.</li>
+      <li>사진은 이 기기 안에서만 처리되고 서버로 올라가지 않아요.</li>
+    </ul>
+  </details>
+
+  <div class="sticky"><button id="goCamera" class="btn primary big" disabled>📸 친구들과 사진 찍기</button></div>
+</section>
+
+<!-- ================= 편집 ================= -->
+<section id="editor" class="screen" hidden>
+  <div class="bar"><button id="edBack" class="icon" aria-label="뒤로">←</button><h2>입체로 만들기</h2></div>
+  <div class="edPanes">
+    <div class="pane"><div class="paneLabel">잘라낸 그림</div><div class="checker"><canvas id="cutCanvas"></canvas></div></div>
+    <div class="pane"><div class="paneLabel">3D 미리보기 · 손가락으로 돌려보세요</div><div id="preview3d"></div></div>
+  </div>
+  <div class="controls">
+    <label>이름 <input type="text" id="nameIn" maxlength="12"></label>
+    <label>배경 지우기 <small>종이 부분이 남으면 올리고, 그림이 잘려 나가면 내려요</small>
+      <input type="range" id="thrIn" min="12" max="130" value="42"></label>
+    <label>통통함 <small>왼쪽은 납작한 종이인형, 오른쪽은 빵빵한 인형</small>
+      <input type="range" id="puffIn" min="0.05" max="1.2" step="0.05" value="0.7"></label>
+    <p id="edMsg" class="msg"></p>
+  </div>
+  <button id="edDone" class="btn primary big">✅ 친구 완성!</button>
+</section>
+
+<!-- ================= AR 카메라 ================= -->
+<section id="ar" class="screen" hidden>
+  <video id="cam" playsinline muted autoplay></video>
+  <img id="bgImg" alt="" hidden>
+  <div id="arStage"></div>
+  <div class="arTop">
+    <button id="arBack" class="icon" aria-label="뒤로">←</button>
+    <div class="arTopRight">
+      <button id="timerBtn" class="pill">⏱ 타이머 끔</button>
+      <button id="flipCam" class="icon" aria-label="카메라 전환">🔄</button>
+    </div>
+  </div>
+  <div id="arHint" class="hintBubble">친구를 끌어서 옮기고, 두 손가락으로 크기·방향을 바꿔요</div>
+  <div id="selTools" class="selTools" hidden>
+    <button data-act="spin">🌀 빙글</button>
+    <button data-act="bounce">🦘 통통</button>
+    <button data-act="mirror">↔️ 뒤집기</button>
+    <button data-act="del">🗑️ 빼기</button>
+  </div>
+  <div id="camMsg" class="camMsg" hidden>
+    <div id="camMsgText"></div>
+    <label class="btn primary">배경 사진 고르기<input type="file" id="bgIn" accept="image/*" hidden></label>
+    <button id="retryCam" class="btn">카메라 다시 켜기</button>
+  </div>
+  <div class="arBottom">
+    <button id="shutter" class="shutter" aria-label="사진 찍기"></button>
+    <div id="tray" class="tray"></div>
+  </div>
+  <div id="countdown" hidden></div>
+  <div id="flash"></div>
+</section>
+
+<!-- ================= 사진 결과 ================= -->
+<div id="photoModal" class="modal" hidden>
+  <div class="sheet">
+    <img id="photoOut" alt="찍은 사진">
+    <div class="row">
+      <a id="saveBtn" class="btn primary" download="photo.jpg">💾 저장</a>
+      <button id="shareBtn" class="btn">📤 공유</button>
+      <button id="closePhoto" class="btn ghost">다시 찍기</button>
+    </div>
+    <p class="small">아이폰은 사진을 길게 눌러 ‘사진에 저장’을 할 수도 있어요.</p>
+  </div>
+</div>
+
+<!-- ================= 바닥 AR (model-viewer) ================= -->
+<div id="floorModal" class="modal" hidden>
+  <div class="sheet">
+    <model-viewer id="mv" ar ar-modes="webxr quick-look" ar-placement="floor" ar-scale="auto"
+      camera-controls auto-rotate shadow-intensity="1" touch-action="pan-y" alt="3D 친구">
+      <button slot="ar-button" class="btn primary arBtn">📱 진짜 바닥에 세우기</button>
+    </model-viewer>
+    <p class="small">바닥을 비추면 친구가 실제 공간에 서요. 휴대폰 화면 캡처로 사진을 남겨요.
+      (안드로이드 크롬·아이폰 사파리에서 동작, 버튼이 안 보이면 이 기기는 공간 AR을 지원하지 않아요)</p>
+    <button id="closeFloor" class="btn ghost">닫기</button>
+  </div>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+
+const $ = s => document.querySelector(s);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const chars = [];
+let charSeq = 0;
+
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.hidden = s.id !== id);
+  if (pv) pv.r.setAnimationLoop(id === 'editor' ? pv.loop : null);
+  if (id !== 'ar' && ar) { ar.renderer.setAnimationLoop(null); stopCamera(); }
+}
+
+/* =====================================================================
+   1. 그림 → 잘라내기 (배경 제거)
+   ===================================================================== */
+const WORK = 480;              // 분석용 해상도
+const lumOf = (r, g, b) => 0.299 * r + 0.587 * g + 0.114 * b;
+const median = a => (a.sort((x, y) => x - y), a[a.length >> 1]);
+
+function readPixels(img) {
+  const s = Math.min(1, WORK / Math.max(img.naturalWidth, img.naturalHeight));
+  const W = Math.max(1, Math.round(img.naturalWidth * s)), H = Math.max(1, Math.round(img.naturalHeight * s));
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const x = c.getContext('2d', { willReadFrequently: true });
+  x.drawImage(img, 0, 0, W, H);
+  return { W, H, s, data: x.getImageData(0, 0, W, H).data };
+}
+
+// 종이 색(조명 얼룩 포함)을 픽셀마다 추정
+function estimateBackground({ W, H, data }) {
+  const m = Math.max(2, Math.round(Math.min(W, H) * 0.03));
+  const R = [], G = [], B = [];
+  for (let y = 0; y < H; y += 2) for (let x = 0; x < W; x += 2) {
+    if (x >= m && x < W - m && y >= m && y < H - m) continue;
+    const i = (y * W + x) * 4; R.push(data[i]); G.push(data[i + 1]); B.push(data[i + 2]);
+  }
+  const paper = [median(R), median(G), median(B)];
+  const pl = lumOf(...paper), ps = paper[0] + paper[1] + paper[2] + 1;
+
+  const bs = Math.max(8, Math.round(Math.max(W, H) / 12));
+  const gx = Math.ceil(W / bs), gy = Math.ceil(H / bs);
+  const grid = new Float32Array(gx * gy * 3);
+  const hist = new Uint32Array(256);
+  for (let by = 0; by < gy; by++) for (let bx = 0; bx < gx; bx++) {
+    const x0 = bx * bs, y0 = by * bs, x1 = Math.min(W, x0 + bs), y1 = Math.min(H, y0 + bs);
+    hist.fill(0); let n = 0;
+    for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+      const i = (y * W + x) * 4; hist[lumOf(data[i], data[i + 1], data[i + 2]) | 0]++; n++;
+    }
+    let acc = 0, cut = 255;
+    for (let v = 255; v >= 0; v--) { acc += hist[v]; if (acc >= n * 0.15) { cut = v; break; } }
+    let r = 0, g = 0, b = 0, k = 0;
+    for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+      const i = (y * W + x) * 4;
+      if (lumOf(data[i], data[i + 1], data[i + 2]) >= cut) { r += data[i]; g += data[i + 1]; b += data[i + 2]; k++; }
+    }
+    r /= k; g /= k; b /= k;
+    const s = r + g + b + 1;
+    const diff = Math.abs(r / s - paper[0] / ps) + Math.abs(g / s - paper[1] / ps) + Math.abs(b / s - paper[2] / ps);
+    const ok = diff < 0.07 && lumOf(r, g, b) > pl * 0.45;   // 그림으로 꽉 찬 블록은 종이색으로 대체
+    const o = (by * gx + bx) * 3;
+    grid[o] = ok ? r : paper[0]; grid[o + 1] = ok ? g : paper[1]; grid[o + 2] = ok ? b : paper[2];
+  }
+  const sm = new Float32Array(grid.length);
+  for (let by = 0; by < gy; by++) for (let bx = 0; bx < gx; bx++) {
+    let r = 0, g = 0, b = 0, k = 0;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      const xx = bx + dx, yy = by + dy; if (xx < 0 || yy < 0 || xx >= gx || yy >= gy) continue;
+      const o = (yy * gx + xx) * 3; r += grid[o]; g += grid[o + 1]; b += grid[o + 2]; k++;
+    }
+    const o = (by * gx + bx) * 3; sm[o] = r / k; sm[o + 1] = g / k; sm[o + 2] = b / k;
+  }
+  const bg = new Uint8ClampedArray(W * H * 3);
+  for (let y = 0; y < H; y++) {
+    const fy = clamp(y / bs - 0.5, 0, gy - 1), y0 = fy | 0, y1 = Math.min(y0 + 1, gy - 1), ty = fy - y0;
+    for (let x = 0; x < W; x++) {
+      const fx = clamp(x / bs - 0.5, 0, gx - 1), x0 = fx | 0, x1 = Math.min(x0 + 1, gx - 1), tx = fx - x0;
+      for (let c = 0; c < 3; c++) {
+        const a = sm[(y0 * gx + x0) * 3 + c], b = sm[(y0 * gx + x1) * 3 + c];
+        const d = sm[(y1 * gx + x0) * 3 + c], e = sm[(y1 * gx + x1) * 3 + c];
+        bg[(y * W + x) * 3 + c] = (a * (1 - tx) + b * tx) * (1 - ty) + (d * (1 - tx) + e * tx) * ty;
+      }
+    }
+  }
+  return bg;
+}
+
+function morph(m, W, H, r, dilate) {
+  const t = new Uint8Array(W * H), o = new Uint8Array(W * H);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    let v = dilate ? 0 : 1;
+    for (let k = -r; k <= r; k++) {
+      const xx = x + k, s = xx < 0 || xx >= W ? 0 : m[y * W + xx];
+      if (dilate ? s : !s) { v = dilate ? 1 : 0; break; }
+    }
+    t[y * W + x] = v;
+  }
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    let v = dilate ? 0 : 1;
+    for (let k = -r; k <= r; k++) {
+      const yy = y + k, s = yy < 0 || yy >= H ? 0 : t[yy * W + x];
+      if (dilate ? s : !s) { v = dilate ? 1 : 0; break; }
+    }
+    o[y * W + x] = v;
+  }
+  return o;
+}
+
+function fillHoles(m, W, H) {
+  const seen = new Uint8Array(W * H), st = new Int32Array(W * H); let sp = 0;
+  const push = i => { if (!m[i] && !seen[i]) { seen[i] = 1; st[sp++] = i; } };
+  for (let x = 0; x < W; x++) { push(x); push((H - 1) * W + x); }
+  for (let y = 0; y < H; y++) { push(y * W); push(y * W + W - 1); }
+  while (sp) {
+    const i = st[--sp], x = i % W, y = (i / W) | 0;
+    if (x > 0) push(i - 1); if (x < W - 1) push(i + 1); if (y > 0) push(i - W); if (y < H - 1) push(i + W);
+  }
+  for (let i = 0; i < W * H; i++) if (!m[i] && !seen[i]) m[i] = 1;
+}
+
+function keepBig(m, W, H, ratio = 0.12) {
+  const lab = new Int32Array(W * H), st = new Int32Array(W * H), areas = [0];
+  let L = 0;
+  for (let i = 0; i < W * H; i++) {
+    if (!m[i] || lab[i]) continue;
+    L++; let a = 0, sp = 0; st[sp++] = i; lab[i] = L;
+    while (sp) {
+      const p = st[--sp], x = p % W, y = (p / W) | 0; a++;
+      const nb = [x > 0 ? p - 1 : -1, x < W - 1 ? p + 1 : -1, y > 0 ? p - W : -1, y < H - 1 ? p + W : -1];
+      for (const q of nb) if (q >= 0 && m[q] && !lab[q]) { lab[q] = L; st[sp++] = q; }
+    }
+    areas.push(a);
+  }
+  let max = 0; for (const a of areas) if (a > max) max = a;
+  for (let i = 0; i < W * H; i++) if (m[i] && areas[lab[i]] < max * ratio) m[i] = 0;
+}
+
+function buildMask(src, bg, thr) {
+  const { W, H, data } = src, n = W * H, t2 = thr * thr;
+  let m = new Uint8Array(n);
+  for (let i = 0; i < n; i++) {
+    const j = i * 4, k = i * 3;
+    const dr = data[j] - bg[k], dg = data[j + 1] - bg[k + 1], db = data[j + 2] - bg[k + 2];
+    m[i] = dr * dr + dg * dg + db * db > t2 ? 1 : 0;
+  }
+  m = morph(morph(m, W, H, 2, true), W, H, 2, false);   // 끊긴 선 잇기
+  fillHoles(m, W, H);                                   // 테두리 안쪽 채우기
+  keepBig(m, W, H);                                     // 작은 얼룩·글씨 제거
+  return m;
+}
+
+function distanceMap(m, W, H) {
+  const d = new Float32Array(W * H), D2 = Math.SQRT2;
+  for (let i = 0; i < W * H; i++) d[i] = m[i] ? 1e9 : 0;
+  const g = (x, y) => (x < 0 || y < 0 || x >= W || y >= H) ? 0 : d[y * W + x];
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const i = y * W + x; if (!d[i]) continue;
+    d[i] = Math.min(d[i], g(x - 1, y) + 1, g(x, y - 1) + 1, g(x - 1, y - 1) + D2, g(x + 1, y - 1) + D2);
+  }
+  for (let y = H - 1; y >= 0; y--) for (let x = W - 1; x >= 0; x--) {
+    const i = y * W + x; if (!d[i]) continue;
+    d[i] = Math.min(d[i], g(x + 1, y) + 1, g(x, y + 1) + 1, g(x + 1, y + 1) + D2, g(x - 1, y + 1) + D2);
+  }
+  return d;
+}
+
+function maxFilter(a, W, H, r) {
+  const t = new Float32Array(W * H), o = new Float32Array(W * H);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    let v = 0; for (let k = Math.max(0, x - r); k <= Math.min(W - 1, x + r); k++) v = Math.max(v, a[y * W + k]);
+    t[y * W + x] = v;
+  }
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    let v = 0; for (let k = Math.max(0, y - r); k <= Math.min(H - 1, y + r); k++) v = Math.max(v, t[k * W + x]);
+    o[y * W + x] = v;
+  }
+  return o;
+}
+
+function cutout(img, src, m) {
+  const { W, H, s } = src;
+  let x0 = W, y0 = H, x1 = -1, y1 = -1, area = 0;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (m[y * W + x]) {
+    area++; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+  }
+  if (x1 < 0 || area < 200) return null;
+  const pad = 3;
+  const coverage = ((x1 - x0 + 1) * (y1 - y0 + 1)) / (W * H);
+  x0 = Math.max(0, x0 - pad); y0 = Math.max(0, y0 - pad); x1 = Math.min(W - 1, x1 + pad); y1 = Math.min(H - 1, y1 + pad);
+  const cw = x1 - x0 + 1, ch = y1 - y0 + 1;
+  const cm = new Uint8Array(cw * ch);
+  for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) cm[y * cw + x] = m[(y + y0) * W + x + x0];
+
+  // 알파 마스크 → 원본 고해상도 텍스처에 적용
+  const mc = document.createElement('canvas'); mc.width = cw; mc.height = ch;
+  const mx = mc.getContext('2d'), id = mx.createImageData(cw, ch);
+  for (let i = 0; i < cw * ch; i++) id.data[i * 4 + 3] = cm[i] * 255;
+  mx.putImageData(id, 0, 0);
+  const sx = x0 / s, sy = y0 / s, sw = cw / s, sh = ch / s;
+  const ts = Math.min(1, 1024 / Math.max(sw, sh));
+  const tex = document.createElement('canvas');
+  tex.width = Math.round(sw * ts); tex.height = Math.round(sh * ts);
+  const tx = tex.getContext('2d');
+  tx.drawImage(img, sx, sy, sw, sh, 0, 0, tex.width, tex.height);
+  tx.globalCompositeOperation = 'destination-in';
+  tx.imageSmoothingEnabled = true;
+  tx.drawImage(mc, 0, 0, tex.width, tex.height);
+
+  const dist = distanceMap(cm, cw, ch);
+  let dmax = 0; for (const v of dist) if (v > dmax) dmax = v;
+  const ridge = maxFilter(dist, cw, ch, Math.max(2, Math.round(dmax * 0.5)));
+  return { tex, mask: cm, W: cw, H: ch, dist, ridge, coverage };
+}
+
+/* =====================================================================
+   2. 잘라낸 그림 → 통통한 3D 모델 (앞·뒤가 부풀어 오른 인형 모양)
+   ===================================================================== */
+function buildGeometry(cut, puff) {
+  const { mask: m, W, H, dist: d, ridge: R } = cut;
+  const N = 120, step = Math.max(W, H) / N;
+  const nx = Math.max(1, Math.ceil(W / step)), ny = Math.max(1, Math.ceil(H / step));
+  const at = (px, py) => clamp(Math.round(py), 0, H - 1) * W + clamp(Math.round(px), 0, W - 1);
+  const cell = new Uint8Array(nx * ny);
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) cell[j * nx + i] = m[at((i + 0.5) * step, (j + 0.5) * step)];
+  const cellIn = (i, j) => i >= 0 && j >= 0 && i < nx && j < ny && cell[j * nx + i];
+
+  const k = 1 / Math.max(W, H), GW = nx + 1;
+  const zg = new Float32Array(GW * (ny + 1)), inner = new Uint8Array(GW * (ny + 1));
+  for (let j = 0; j <= ny; j++) for (let i = 0; i <= nx; i++) {
+    if (!(cellIn(i - 1, j - 1) && cellIn(i, j - 1) && cellIn(i - 1, j) && cellIn(i, j))) continue;
+    const q = at(i * step, j * step), dd = d[q], rr = Math.max(R[q], dd);
+    zg[j * GW + i] = Math.sqrt(Math.max(0, 2 * dd * rr - dd * dd));   // 원형 단면으로 부풀리기
+    inner[j * GW + i] = 1;
+  }
+  for (let it = 0; it < 4; it++) {                                     // 울퉁불퉁한 면 다듬기 (테두리는 0 유지)
+    const t = zg.slice();
+    for (let j = 1; j < ny; j++) for (let i = 1; i < nx; i++) {
+      const q = j * GW + i; if (!inner[q]) continue;
+      zg[q] = t[q] * 0.4 + (t[q - 1] + t[q + 1] + t[q - GW] + t[q + GW]) * 0.15;
+    }
+  }
+  const vid = new Int32Array(GW * (ny + 1)).fill(-1);
+  const pos = [], uv = [], zs = [];
+  for (let j = 0; j <= ny; j++) for (let i = 0; i <= nx; i++) {
+    if (!(cellIn(i - 1, j - 1) || cellIn(i, j - 1) || cellIn(i - 1, j) || cellIn(i, j))) continue;
+    const px = i * step, py = j * step;
+    vid[j * GW + i] = pos.length / 3;
+    pos.push((px - W / 2) * k, (H - py) * k, 0);
+    uv.push(Math.min(1, px / W), 1 - Math.min(1, py / H));
+    zs.push(zg[j * GW + i] * k * puff);
+  }
+  const nv = pos.length / 3;
+  const P = new Float32Array(nv * 6), U = new Float32Array(nv * 4);
+  for (let v = 0; v < nv; v++) {
+    P[v * 3] = P[(nv + v) * 3] = pos[v * 3];
+    P[v * 3 + 1] = P[(nv + v) * 3 + 1] = pos[v * 3 + 1];
+    P[v * 3 + 2] = zs[v]; P[(nv + v) * 3 + 2] = -zs[v];
+    U[v * 2] = U[(nv + v) * 2] = uv[v * 2];
+    U[v * 2 + 1] = U[(nv + v) * 2 + 1] = uv[v * 2 + 1];
+  }
+  const idx = [];
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+    if (!cellIn(i, j)) continue;
+    const a = vid[j * GW + i], b = vid[j * GW + i + 1];
+    const c = vid[(j + 1) * GW + i], e = vid[(j + 1) * GW + i + 1];
+    idx.push(a, c, b, b, c, e);                               // 앞면
+    idx.push(nv + a, nv + b, nv + c, nv + b, nv + e, nv + c); // 뒷면
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(P, 3));
+  g.setAttribute('uv', new THREE.BufferAttribute(U, 2));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  g.computeBoundingBox();
+  const bb = g.boundingBox;
+  g.translate(-(bb.min.x + bb.max.x) / 2, -bb.min.y, 0);     // 발이 바닥(y=0)에 닿게
+  g.computeBoundingBox();
+  g.computeBoundingSphere();
+  return g;
+}
+
+function addLights(scene) {
+  scene.add(new THREE.HemisphereLight(0xffffff, 0xa89b8c, 2.2));
+  const dl = new THREE.DirectionalLight(0xffffff, 1.3); dl.position.set(1.5, 3, 4); scene.add(dl);
+}
+
+function makeShadowTex() {
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const x = c.getContext('2d'), g = x.createRadialGradient(64, 64, 0, 64, 64, 64);
+  g.addColorStop(0, 'rgba(0,0,0,.45)'); g.addColorStop(.6, 'rgba(0,0,0,.18)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+  x.fillStyle = g; x.fillRect(0, 0, 128, 128);
+  return new THREE.CanvasTexture(c);
+}
+const shadowTex = makeShadowTex();
+function makeShadow(size) {
+  const sh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1),
+    new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false }));
+  sh.rotation.x = -Math.PI / 2; sh.position.y = 0.002;
+  sh.scale.set(size.x * 1.15, Math.max(size.z * 2.2, 0.25), 1);
+  return sh;
+}
+
+/* =====================================================================
+   3. 편집 화면
+   ===================================================================== */
+let ed = null, pv = null;
+
+function initPreview() {
+  if (pv) return;
+  const el = $('#preview3d');
+  const r = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  r.setPixelRatio(Math.min(devicePixelRatio, 2));
+  el.appendChild(r.domElement);
+  const scene = new THREE.Scene(); addLights(scene);
+  const cam = new THREE.PerspectiveCamera(35, 1, 0.05, 50);
+  cam.position.set(0, 0.6, 2.6);
+  const ctl = new OrbitControls(cam, r.domElement);
+  Object.assign(ctl, { autoRotate: true, autoRotateSpeed: 3, enableDamping: true, enablePan: false, minDistance: 1, maxDistance: 5 });
+  const holder = new THREE.Group(); scene.add(holder);
+  const resize = () => { const w = el.clientWidth, h = el.clientHeight; if (!w || !h) return; r.setSize(w, h); cam.aspect = w / h; cam.updateProjectionMatrix(); };
+  new ResizeObserver(resize).observe(el); resize();
+  pv = { r, scene, cam, ctl, holder, loop: () => { ctl.update(); r.render(scene, cam); } };
+  r.setAnimationLoop(pv.loop);
+}
+
+async function openEditor(img) {
+  ed = { img, src: readPixels(img) };
+  ed.bg = estimateBackground(ed.src);
+  $('#nameIn').value = `친구 ${charSeq + 1}`;
+  $('#thrIn').value = 42; $('#puffIn').value = 0.7;
+  show('editor'); initPreview();
+  rebuildMask();
+}
+
+function rebuildMask() {
+  const m = buildMask(ed.src, ed.bg, +$('#thrIn').value);
+  const cut = cutout(ed.img, ed.src, m);
+  const cc = $('#cutCanvas');
+  if (!cut) {
+    ed.cut = null; cc.width = cc.height = 1;
+    $('#edMsg').textContent = '그림을 찾지 못했어요. ‘배경 지우기’를 왼쪽으로 내려 보세요.';
+    $('#edDone').disabled = true; pv.holder.clear(); return;
+  }
+  ed.cut = cut; $('#edDone').disabled = false;
+  cc.width = cut.tex.width; cc.height = cut.tex.height;
+  cc.getContext('2d').drawImage(cut.tex, 0, 0);
+  $('#edMsg').textContent = cut.coverage > 0.93
+    ? '종이 밖(책상 등)까지 잡혔을 수 있어요. ‘배경 지우기’를 올리거나 종이만 꽉 차게 다시 찍어 주세요.' : '';
+  ed.texture?.dispose(); ed.material?.dispose();
+  ed.texture = new THREE.CanvasTexture(cut.tex);
+  ed.texture.colorSpace = THREE.SRGBColorSpace;
+  ed.texture.anisotropy = 4;
+  ed.material = new THREE.MeshStandardMaterial({ map: ed.texture, alphaTest: 0.5, roughness: 0.85, metalness: 0 });
+  rebuildMesh();
+}
+
+function rebuildMesh() {
+  if (!ed?.cut) return;
+  ed.geometry?.dispose();
+  ed.geometry = buildGeometry(ed.cut, +$('#puffIn').value);
+  pv.holder.clear();
+  const size = ed.geometry.boundingBox.getSize(new THREE.Vector3());
+  pv.holder.add(new THREE.Mesh(ed.geometry, ed.material), makeShadow(size));
+  pv.ctl.target.set(0, size.y / 2, 0);
+}
+
+function debounce(fn, ms = 80) { let t; return () => { clearTimeout(t); t = setTimeout(fn, ms); }; }
+$('#thrIn').addEventListener('input', debounce(rebuildMask));
+$('#puffIn').addEventListener('input', debounce(rebuildMesh, 40));
+
+$('#edBack').onclick = () => {
+  ed?.geometry?.dispose(); ed?.material?.dispose(); ed?.texture?.dispose(); ed = null;
+  pv.holder.clear(); show('home');
+};
+
+$('#edDone').onclick = () => {
+  const t = document.createElement('canvas'); t.width = t.height = 256;
+  const s = 240 / Math.max(ed.cut.tex.width, ed.cut.tex.height);
+  const w = ed.cut.tex.width * s, h = ed.cut.tex.height * s;
+  t.getContext('2d').drawImage(ed.cut.tex, (256 - w) / 2, (256 - h) / 2, w, h);
+  charSeq++;
+  chars.push({
+    id: charSeq, name: $('#nameIn').value.trim() || `친구 ${charSeq}`,
+    geometry: ed.geometry, material: ed.material,
+    size: ed.geometry.boundingBox.getSize(new THREE.Vector3()), thumb: t.toDataURL(),
+  });
+  ed = null; pv.holder.clear();
+  renderHome(); show('home');
+};
+
+/* =====================================================================
+   4. 홈 화면
+   ===================================================================== */
+function loadImage(src) {
+  return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
+}
+
+$('#fileIn').addEventListener('change', async e => {
+  const f = e.target.files[0]; e.target.value = '';
+  if (!f) return;
+  try { await openEditor(await loadImage(URL.createObjectURL(f))); }
+  catch { alert('사진을 열 수 없어요. 다른 사진으로 해 보세요.'); }
+});
+$('#sampleBtn').onclick = async () => openEditor(await loadImage(makeSample()));
+
+function renderHome() {
+  const list = $('#charList'); list.innerHTML = '';
+  for (const c of chars) {
+    const card = document.createElement('div'); card.className = 'card';
+    card.innerHTML = `<div class="thumb"><img alt=""></div><div class="name"></div>
+      <div class="acts"><button data-a="floor">🧍 바닥 AR</button><button data-a="glb">⬇️ 3D 파일</button><button data-a="del" aria-label="삭제">🗑️</button></div>`;
+    card.querySelector('img').src = c.thumb;
+    card.querySelector('.name').textContent = c.name;
+    card.querySelector('[data-a=floor]').onclick = () => openFloor(c);
+    card.querySelector('[data-a=glb]').onclick = async () => {
+      const a = document.createElement('a'); a.href = URL.createObjectURL(await exportGLB(c));
+      a.download = `${c.name}.glb`; a.click();
+    };
+    card.querySelector('[data-a=del]').onclick = () => {
+      if (!confirm(`‘${c.name}’을(를) 지울까요?`)) return;
+      chars.splice(chars.indexOf(c), 1);
+      if (ar) [...ar.items].filter(g => g.userData.char === c).forEach(removeItem);
+      renderHome();
+    };
+    list.appendChild(card);
+  }
+  $('#count').textContent = chars.length ? `${chars.length}명` : '';
+  $('#emptyHint').hidden = chars.length > 0;
+  $('#goCamera').disabled = !chars.length;
+}
+
+/* =====================================================================
+   5. AR 카메라 (카메라 화면 위에 3D 친구를 올려 같이 촬영)
+   ===================================================================== */
+let ar = null;
+const ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+const ray = new THREE.Raycaster();
+
+function initAR() {
+  if (ar) return;
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.setClearColor(0x000000, 0);
+  $('#arStage').appendChild(renderer.domElement);
+  const scene = new THREE.Scene(); addLights(scene);
+  const camera = new THREE.PerspectiveCamera(45, 1, 0.05, 60);
+  camera.position.set(0, 0.95, 3.4); camera.lookAt(0, 0.55, 0);
+  ar = { renderer, scene, camera, items: [], selected: null, facing: 'environment', stream: null, bgEl: null, mirror: false, timer: 0, last: 0 };
+  const resize = () => {
+    renderer.setSize(innerWidth, innerHeight);
+    camera.aspect = innerWidth / innerHeight;
+    camera.fov = camera.aspect < 1 ? 50 : 38;
+    camera.updateProjectionMatrix();
+  };
+  addEventListener('resize', resize); resize();
+  setupGestures(renderer.domElement);
+}
+
+function arLoop(t) {
+  const dt = Math.min(0.05, (t - ar.last) / 1000 || 0); ar.last = t;
+  for (const g of ar.items) {
+    const u = g.userData;
+    if (u.spin) g.rotation.y += dt * 1.3;
+    if (u.bounce) {
+      u.phase += dt * 5.5;
+      const b = Math.abs(Math.sin(u.phase));
+      u.mesh.position.y = b * 0.16;
+      u.mesh.scale.y = 1 - Math.pow(1 - b, 6) * 0.12;
+    } else { u.mesh.position.y = 0; u.mesh.scale.y = 1; }
+    u.ring.material.opacity = 0.55 + Math.sin(t / 250) * 0.3;
+  }
+  ar.renderer.render(ar.scene, ar.camera);
+}
+
+function makeItem(c) {
+  const g = new THREE.Group();
+  const mesh = new THREE.Mesh(c.geometry, c.material);
+  mesh.userData.root = g;
+  const ring = new THREE.Mesh(new THREE.RingGeometry(0.44, 0.5, 48),
+    new THREE.MeshBasicMaterial({ color: 0x3aa7ff, transparent: true, depthWrite: false }));
+  ring.rotation.x = -Math.PI / 2; ring.position.y = 0.004;
+  ring.scale.set(c.size.x * 1.25, Math.max(c.size.z * 2.4, 0.35), 1);
+  ring.visible = false;
+  g.add(mesh, makeShadow(c.size), ring);
+  g.userData = { char: c, mesh, ring, spin: false, bounce: false, phase: Math.random() * 6, s: 1, flip: 1 };
+  return g;
+}
+
+function addItem(c, x = (Math.random() - 0.5) * 1.2, z = -0.8) {
+  const g = makeItem(c);
+  g.position.set(x, 0, z);
+  ar.scene.add(g); ar.items.push(g);
+  select(g);
+}
+function removeItem(g) {
+  ar.scene.remove(g); ar.items.splice(ar.items.indexOf(g), 1);
+  if (ar.selected === g) select(null);
+}
+function applyScale(g) { g.scale.setScalar(g.userData.s); g.userData.mesh.scale.x = g.userData.flip; }
+
+function select(g) {
+  if (ar.selected) ar.selected.userData.ring.visible = false;
+  ar.selected = g;
+  $('#selTools').hidden = !g;
+  if (!g) return;
+  g.userData.ring.visible = true;
+  document.querySelectorAll('#selTools button').forEach(b => b.classList.toggle('on', !!g.userData[b.dataset.act]));
+}
+
+$('#selTools').addEventListener('click', e => {
+  const act = e.target.closest('button')?.dataset.act, g = ar.selected;
+  if (!act || !g) return;
+  if (act === 'del') return removeItem(g);
+  if (act === 'mirror') { g.userData.flip *= -1; applyScale(g); return; }
+  g.userData[act] = !g.userData[act];
+  e.target.closest('button').classList.toggle('on', g.userData[act]);
+});
+
+function setupGestures(el) {
+  const pts = new Map();
+  let gest = null, down = null;
+  const ndc = p => { const r = el.getBoundingClientRect(); return new THREE.Vector2((p.clientX - r.left) / r.width * 2 - 1, -(p.clientY - r.top) / r.height * 2 + 1); };
+  const groundHit = p => { ray.setFromCamera(ndc(p), ar.camera); const v = new THREE.Vector3(); return ray.ray.intersectPlane(ground, v); };
+  const pick = p => {
+    ray.setFromCamera(ndc(p), ar.camera);
+    const hit = ray.intersectObjects(ar.items.map(g => g.userData.mesh), false)[0];
+    return hit ? hit.object.userData.root : null;
+  };
+  // 발 위치(화면 좌표)가 손가락 이동만큼 따라가도록 → 바닥 위에서 자연스럽게 앞뒤로 움직임
+  const startDrag = p => {
+    const r = el.getBoundingClientRect(), v = ar.selected.position.clone().project(ar.camera);
+    gest = { type: 'drag', px: p.clientX, py: p.clientY,
+      fx: (v.x + 1) / 2 * r.width + r.left, fy: (1 - v.y) / 2 * r.height + r.top };
+  };
+  const startPinch = () => {
+    const [a, b] = [...pts.values()];
+    gest = { type: 'pinch', d0: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) || 1,
+      a0: Math.atan2(b.clientY - a.clientY, b.clientX - a.clientX), s0: ar.selected.userData.s, r0: ar.selected.rotation.y };
+  };
+
+  el.addEventListener('pointerdown', e => {
+    el.setPointerCapture(e.pointerId);
+    pts.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY });
+    $('#arHint').style.opacity = 0;
+    if (pts.size === 1) {
+      const hit = pick(e);
+      down = { x: e.clientX, y: e.clientY, empty: !hit };
+      if (hit) { select(hit); startDrag(e); } else gest = null;
+    } else if (pts.size === 2 && ar.selected) startPinch();
+  });
+  el.addEventListener('pointermove', e => {
+    if (!pts.has(e.pointerId)) return;
+    pts.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY });
+    const g = ar.selected; if (!g || !gest) return;
+    if (gest.type === 'drag' && pts.size === 1) {
+      const h = groundHit({ clientX: gest.fx + e.clientX - gest.px, clientY: gest.fy + e.clientY - gest.py });
+      if (!h) return;
+      g.position.set(clamp(h.x, -5, 5), 0, clamp(h.z, -10, 1.8));
+    } else if (gest.type === 'pinch' && pts.size === 2) {
+      const [a, b] = [...pts.values()];
+      const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+      const ang = Math.atan2(b.clientY - a.clientY, b.clientX - a.clientX);
+      g.userData.s = clamp(gest.s0 * d / gest.d0, 0.15, 6); applyScale(g);
+      g.rotation.y = gest.r0 + (ang - gest.a0);
+    }
+  });
+  const up = e => {
+    if (!pts.has(e.pointerId)) return;
+    pts.delete(e.pointerId);
+    if (pts.size === 1 && ar.selected) startDrag([...pts.values()][0]);
+    if (pts.size === 0) {
+      if (down?.empty && !gest && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 10) select(null);
+      gest = null; down = null;
+    }
+  };
+  el.addEventListener('pointerup', up);
+  el.addEventListener('pointercancel', up);
+  el.addEventListener('wheel', e => {
+    const g = ar.selected; if (!g) return; e.preventDefault();
+    if (e.shiftKey) g.rotation.y += e.deltaY * 0.004;
+    else { g.userData.s = clamp(g.userData.s * Math.exp(-e.deltaY * 0.0015), 0.15, 6); applyScale(g); }
+  }, { passive: false });
+}
+
+async function startCamera() {
+  stopCamera();
+  $('#camMsg').hidden = true;
+  if (!navigator.mediaDevices?.getUserMedia)
+    return camFail('이 브라우저에서는 카메라를 쓸 수 없어요. (https:// 주소로 열어야 카메라가 켜져요)');
+  try {
+    ar.stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: ar.facing }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false });
+    const v = $('#cam');
+    v.srcObject = ar.stream; v.hidden = false; $('#bgImg').hidden = true;
+    await v.play().catch(() => {});
+    ar.bgEl = v; ar.mirror = ar.facing === 'user';
+    v.classList.toggle('mirror', ar.mirror);
+  } catch (err) {
+    camFail(err.name === 'NotAllowedError' ? '카메라 권한을 허용해 주세요. (주소창 옆 자물쇠 → 카메라 허용)' : `카메라를 켤 수 없어요. (${err.name})`);
+  }
+}
+function stopCamera() {
+  ar?.stream?.getTracks().forEach(t => t.stop());
+  if (ar) ar.stream = null;
+}
+function camFail(text) {
+  ar.bgEl = null; $('#cam').hidden = true;
+  $('#camMsgText').textContent = text + ' 대신 배경 사진을 골라서 합성할 수도 있어요.';
+  $('#camMsg').hidden = false;
+}
+$('#retryCam').onclick = startCamera;
+$('#bgIn').addEventListener('change', e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  const img = $('#bgImg');
+  img.onload = () => { img.hidden = false; ar.bgEl = img; ar.mirror = false; $('#camMsg').hidden = true; };
+  img.src = URL.createObjectURL(f);
+});
+$('#flipCam').onclick = () => { ar.facing = ar.facing === 'user' ? 'environment' : 'user'; startCamera(); };
+
+const TIMERS = [0, 3, 10];
+$('#timerBtn').onclick = () => {
+  ar.timer = TIMERS[(TIMERS.indexOf(ar.timer) + 1) % TIMERS.length];
+  $('#timerBtn').textContent = ar.timer ? `⏱ ${ar.timer}초` : '⏱ 타이머 끔';
+};
+
+$('#goCamera').onclick = () => {
+  initAR();
+  show('ar');
+  if (!ar.items.length) {                         // 처음이면 최근 친구들을 나란히 세우기
+    const list = chars.slice(-5), n = list.length;
+    list.forEach((c, i) => addItem(c, (i - (n - 1) / 2) * 0.8, -0.8 - (i % 2) * 0.5));
+    select(null);
+  }
+  renderTray();
+  $('#arHint').style.opacity = 1;
+  setTimeout(() => $('#arHint').style.opacity = 0, 5000);
+  ar.renderer.setAnimationLoop(arLoop);
+  startCamera();
+};
+$('#arBack').onclick = () => show('home');
+
+function renderTray() {
+  const tray = $('#tray'); tray.innerHTML = '';
+  for (const c of chars) {
+    const b = document.createElement('button'); b.title = `${c.name} 추가`;
+    b.innerHTML = '<img alt="">'; b.querySelector('img').src = c.thumb;
+    b.onclick = () => addItem(c);
+    tray.appendChild(b);
+  }
+}
+
+function capture() {
+  const { renderer, scene, camera } = ar;
+  const sel = ar.selected; if (sel) sel.userData.ring.visible = false;
+  renderer.render(scene, camera);
+  const W = renderer.domElement.width, H = renderer.domElement.height;
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const x = c.getContext('2d');
+  const bg = ar.bgEl, sw = bg?.videoWidth || bg?.naturalWidth, sh = bg?.videoHeight || bg?.naturalHeight;
+  if (sw && sh) {                                 // object-fit: cover 와 같은 방식으로 자르기
+    const s = Math.max(W / sw, H / sh), dw = sw * s, dh = sh * s;
+    x.save();
+    if (ar.mirror) { x.translate(W, 0); x.scale(-1, 1); }
+    x.drawImage(bg, (W - dw) / 2, (H - dh) / 2, dw, dh);
+    x.restore();
+  } else { x.fillStyle = '#dfe7ef'; x.fillRect(0, 0, W, H); }
+  x.drawImage(renderer.domElement, 0, 0);
+  if (sel) sel.userData.ring.visible = true;
+  return new Promise(r => c.toBlob(r, 'image/jpeg', 0.92));
+}
+
+let busy = false, photoURL = null, photoFile = null;
+$('#shutter').onclick = async () => {
+  if (busy) return; busy = true;
+  const cd = $('#countdown');
+  for (let s = ar.timer; s > 0; s--) { cd.textContent = s; cd.hidden = false; await sleep(1000); }
+  cd.hidden = true;
+  const blob = await capture();
+  const f = $('#flash'); f.classList.add('go'); requestAnimationFrame(() => requestAnimationFrame(() => f.classList.remove('go')));
+  const d = new Date(), pad = n => String(n).padStart(2, '0');
+  const name = `그림친구_${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}.jpg`;
+  if (photoURL) URL.revokeObjectURL(photoURL);
+  photoURL = URL.createObjectURL(blob);
+  photoFile = new File([blob], name, { type: 'image/jpeg' });
+  $('#photoOut').src = photoURL;
+  $('#saveBtn').href = photoURL; $('#saveBtn').download = name;
+  $('#shareBtn').hidden = !navigator.canShare?.({ files: [photoFile] });
+  $('#photoModal').hidden = false;
+  busy = false;
+};
+$('#shareBtn').onclick = () => navigator.share({ files: [photoFile], title: '그림친구 AR' }).catch(() => {});
+$('#closePhoto').onclick = () => $('#photoModal').hidden = true;
+
+/* =====================================================================
+   6. 바닥에 세우는 진짜 AR (model-viewer: 안드로이드 WebXR / iOS Quick Look)
+   ===================================================================== */
+function exportGLB(c) {
+  return new Promise((res, rej) => {
+    const scene = new THREE.Scene();
+    const m = new THREE.Mesh(c.geometry, c.material);
+    m.scale.setScalar(0.6);                     // 실제 공간에서 약 60cm 크기
+    scene.add(m);
+    new GLTFExporter().parse(scene, glb => res(new Blob([glb], { type: 'model/gltf-binary' })), rej, { binary: true });
+  });
+}
+async function openFloor(c) {
+  const mv = $('#mv');
+  if (mv.src?.startsWith('blob:')) URL.revokeObjectURL(mv.src);
+  mv.src = URL.createObjectURL(await exportGLB(c));
+  $('#floorModal').hidden = false;
+}
+$('#closeFloor').onclick = () => $('#floorModal').hidden = true;
+
+/* =====================================================================
+   샘플 그림 (테스트용)
+   ===================================================================== */
+function makeSample() {
+  const c = document.createElement('canvas'); c.width = 900; c.height = 1100;
+  const x = c.getContext('2d');
+  const g = x.createLinearGradient(0, 0, 900, 1100);
+  g.addColorStop(0, '#fbfaf4'); g.addColorStop(1, '#e2ddd2');
+  x.fillStyle = g; x.fillRect(0, 0, 900, 1100);
+  x.lineWidth = 10; x.strokeStyle = '#26212b'; x.lineJoin = x.lineCap = 'round';
+  const ell = (cx, cy, rx, ry, fill, rot = 0) => { x.beginPath(); x.ellipse(cx, cy, rx, ry, rot, 0, Math.PI * 2); x.fillStyle = fill; x.fill(); x.stroke(); };
+  const poly = (pts, fill) => { x.beginPath(); pts.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.closePath(); x.fillStyle = fill; x.fill(); x.stroke(); };
+  ell(340, 905, 75, 42, '#ff8a3d'); ell(560, 905, 75, 42, '#ff8a3d');
+  ell(205, 600, 52, 115, '#ffd23f', -0.7); ell(695, 600, 52, 115, '#ffd23f', 0.7);
+  poly([[250, 420], [255, 210], [400, 330]], '#ffd23f'); poly([[650, 420], [645, 210], [500, 330]], '#ffd23f');
+  poly([[268, 390], [270, 262], [360, 336]], '#ff9eb5'); poly([[632, 390], [630, 262], [540, 336]], '#ff9eb5');
+  ell(450, 610, 285, 290, '#ffd23f');
+  x.fillStyle = '#26212b';
+  ell(360, 560, 34, 46, '#26212b'); ell(540, 560, 34, 46, '#26212b');
+  x.fillStyle = '#fff'; x.beginPath(); x.arc(372, 544, 12, 0, 7); x.arc(552, 544, 12, 0, 7); x.fill();
+  x.fillStyle = '#ff7b93'; x.beginPath(); x.ellipse(300, 650, 42, 26, 0, 0, 7); x.ellipse(600, 650, 42, 26, 0, 0, 7); x.fill();
+  x.beginPath(); x.arc(450, 640, 60, 0.15 * Math.PI, 0.85 * Math.PI); x.stroke();
+  poly([[450, 740], [470, 790], [525, 795], [482, 828], [497, 882], [450, 852], [403, 882], [418, 828], [375, 795], [430, 790]], '#5fb8ff');
+  x.fillStyle = '#6b6470'; x.font = 'bold 46px sans-serif'; x.fillText('3반 별이 ♥', 590, 1062);
+  return c.toDataURL('image/png');
+}
+
+renderHome();
+</script>
+</body>
+</html>
